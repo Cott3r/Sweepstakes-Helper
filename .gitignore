@@ -218,3 +218,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Sweepstakes Helper local secrets and databases
+user_profile.json
+!user_profile.json.example
+.env
+data/
+logs/
+.venv/

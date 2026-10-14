@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Morning Trigger for Sweepstakes Helper (Austria)
+
+[Timer]
+# Run every morning at 08:30 Europe/Vienna time
+OnCalendar=*-*-* 08:30:00
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

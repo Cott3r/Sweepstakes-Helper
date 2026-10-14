@@ -1,0 +1,13 @@
+{
+  "first_name": "Max",
+  "last_name": "Mustermann",
+  "email": "max.mustermann.gewinnspiele@gmail.com",
+  "phone": "+436601234567",
+  "street": "Mariahilfer Straße",
+  "house_number": "101/2/5",
+  "postal_code": "1060",
+  "city": "Wien",
+  "country": "Österreich",
+  "birth_date": "15.06.1992",
+  "salutation": "Herr"
+}

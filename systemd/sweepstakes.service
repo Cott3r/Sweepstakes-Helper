@@ -1,0 +1,16 @@
+[Unit]
+Description=Daily Sweepstakes Assistant & Automated Entry (Austria)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=%i
+WorkingDirectory=/home/%i/Documents/PycharmProjects/Sweepstakes-Helper
+Environment="PYTHONPATH=/home/%i/Documents/PycharmProjects/Sweepstakes-Helper"
+ExecStart=/home/%i/Documents/PycharmProjects/Sweepstakes-Helper/.venv/bin/python main.py run --no-interactive
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
