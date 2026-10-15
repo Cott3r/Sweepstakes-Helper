@@ -27,6 +27,7 @@ class UserProfile(BaseModel):
     country: str = Field(default="Österreich", description="Country name in German or English")
     birth_date: Optional[str] = Field(None, description="Date of birth in DD.MM.YYYY or YYYY-MM-DD")
     salutation: str = Field(default="Herr", description="Anrede: Herr / Frau / Diverse")
+    site_accounts: Dict[str, Dict[str, str]] = Field(default_factory=dict, description="Site-specific accounts and credentials (e.g. weekend.at)")
 
     @property
     def full_name(self) -> str:

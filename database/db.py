@@ -369,6 +369,27 @@ class Database:
                 "pending_manual": pending_manual,
             }
 
+    def remove_instagram_post_sweepstakes(self) -> int:
+        """Deletes Instagram sweepstakes that require a post/interaction from the database.
+
+        Returns:
+            Number of deleted records.
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                DELETE FROM sweepstakes
+                WHERE (title LIKE '%instagram%' OR url LIKE '%instagram%')
+                  AND (title LIKE '%beitrag%' OR title LIKE '%post%' OR url LIKE '%/p/%' OR url LIKE '%/reel/%' OR title LIKE '%teilen%');
+                """
+            )
+            count = cursor.rowcount
+            conn.commit()
+            if count > 0:
+                logger.info(f"Removed {count} Instagram sweepstakes requiring a post from database.")
+            return count
+
     @staticmethod
     def _row_to_item(row: sqlite3.Row) -> SweepstakeItem:
         """Converts an SQLite row into a SweepstakeItem model."""

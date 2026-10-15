@@ -197,8 +197,15 @@ class RedditSweepstakesScraper(BaseScraper):
                 logger.debug(f"[{self.name}] Ineligible geo-tag ({country_tag}): {title[:60]}")
                 continue
 
-            # Check if redirect or widget platform
+            # Skip Instagram sweepstakes that require a post
             url_lower = url.lower()
+            title_lower = title.lower()
+            if ("instagram.com/p/" in url_lower or "instagram.com/reel/" in url_lower) or (
+                "instagram" in title_lower and any(term in title_lower for term in ["post", "beitrag", "story", "feed"])
+            ):
+                logger.debug(f"[{self.name}] Skipping Instagram sweepstake requiring a post: {title[:60]}")
+                continue
+
             requires_manual = False
             # Gleam, Sweepwidget, ViralSweep, or social tasks may require user authentication or CAPTCHAs
             if any(dom in url_lower for dom in ["gleam.io", "sweepwidget.com", "viralsweep.com", "kingsumo.com"]):

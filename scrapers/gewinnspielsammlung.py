@@ -115,12 +115,23 @@ class GewinnspielsammlungScraper(BaseScraper):
             sol_match = re.search(r"Lösungsvorschlag:?\s*([^|\(\n\r]+)", text)
             quiz_solution = sol_match.group(1).strip() if sol_match else None
 
+            text_lower = text.lower()
+
+            # Skip Instagram sweepstakes that require a post (e.g. beitrag liken, kommentieren, teilen, or instagram.com/p/)
+            is_instagram_post = (
+                ("instagram" in text_lower and any(term in text_lower for term in ["beitrag", "post", "story", "feed"]))
+                or "instagram.com/p/" in destination_url
+                or "instagram.com/reel/" in destination_url
+            )
+            if is_instagram_post:
+                logger.debug(f"[{self.name}] Skipping Instagram sweepstake requiring a post: {title}")
+                continue
+
             # Detect manual intervention requirements:
             # - Social media action (Instagram, Facebook, TikTok)
             # - Mobile app download (e.g. Mein A1 App, Hofer App)
             # - Creative contest (e.g. Foto hochladen, persönlicher Kommentar)
             # - Pure discount voucher codes (Aktion: -20%)
-            text_lower = text.lower()
             requires_manual = False
             if any(term in text_lower for term in [
                 "instagram", "facebook", "tiktok", "app herunterladen",

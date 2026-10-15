@@ -9,5 +9,11 @@
   "city": "Wien",
   "country": "Österreich",
   "birth_date": "15.06.1992",
-  "salutation": "Herr"
+  "salutation": "Herr",
+  "site_accounts": {
+    "weekend.at": {
+      "username": "user@example.com",
+      "password": "SecretPassword123!"
+    }
+  }
 }

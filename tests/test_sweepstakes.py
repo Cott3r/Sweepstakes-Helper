@@ -61,6 +61,21 @@ def test_user_profile_and_field_matcher():
     assert filler._match_field_value("gewinnspiel_antwort", "text") == "Mallorca"
     assert filler._match_field_value("loesungsvorschlag", "text") == "Mallorca"
 
+    # Verifies fix for mailingpostalcode not matching email
+    assert filler._match_field_value("tx_pipernewsletter_raffle[data][mailingpostalcode]", "text") == "1060"
+
+    # Verifies fix for 'titel' / book search not matching phone ('tel')
+    assert filler._match_field_value("header-search-input schlagwort, titel, autor", "text") is None
+
+    # Verifies fix for split birth date fields (day, month, year)
+    assert filler._match_field_value("input_84_6_2 tag", "number") == "15"
+    assert filler._match_field_value("input_84_6_1 monat", "number") == "06"
+    assert filler._match_field_value("input_84_6_3 jahr", "number") == "1990"
+
+    # Verifies email confirmation and bundesland exclusion
+    assert filler._match_field_value("input_84_8_2 e-mail bestätigen", "email") == "max@example.at"
+    assert filler._match_field_value("bundesland", "text") is None
+
 
 def test_database_persistence_and_deduplication():
     """Tests SQLite state management and deduplication logic."""
@@ -171,4 +186,62 @@ def test_form_filler_quiz_matching():
     assert filler._match_field_value("solutionword", "text") == "ca. 40%"
     assert filler._match_field_value("gewinnfrage", "text") == "ca. 40%"
     assert filler._match_field_value("antwort", "text") == "ca. 40%"
+
+
+def test_remove_instagram_post_sweepstakes():
+    """Verifies removal of Instagram sweepstakes that require a post/interaction."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        db = Database(Path(tmp_dir) / "ig_test.db")
+        
+        # Instagram post contest (should be removed)
+        db.insert_or_update_item(SweepstakeItem(
+            source="gewinnspielsammlung_at",
+            external_id="ig_post_1",
+            url="https://www.instagram.com/p/DeZnCfhkh7C/",
+            title="Jolly - Kinotickets Instagramkanal folgen, -beitrag kommentieren",
+        ))
+        # Instagram reel contest (should be removed)
+        db.insert_or_update_item(SweepstakeItem(
+            source="gewinnspielsammlung_at",
+            external_id="ig_post_2",
+            url="https://www.instagram.com/reel/DeRP0kfjq0H/",
+            title="NewMom - Baby Thermometer Instagramkanälen folgen, -beitrag liken",
+        ))
+        # Non-Instagram or non-post contest (should remain)
+        db.insert_or_update_item(SweepstakeItem(
+            source="gewinnspielsammlung_at",
+            external_id="regular_web_1",
+            url="https://www.weekend.at/gewinnspiele/tickets",
+            title="Weekend - Tickets gewinnen",
+        ))
+
+        removed = db.remove_instagram_post_sweepstakes()
+        assert removed == 2
+        remaining = db.get_pending_items(limit=10)
+        assert len(remaining) == 1
+        assert remaining[0].external_id == "regular_web_1"
+
+
+def test_user_profile_site_accounts():
+    """Verifies that site-specific credentials can be stored and retrieved."""
+    profile = UserProfile(
+        first_name="Max",
+        last_name="Mustermann",
+        email="max@example.at",
+        phone="+436601234567",
+        street="Mariahilfer Straße",
+        house_number="101",
+        postal_code="1060",
+        city="Wien",
+        country="Österreich",
+        site_accounts={
+            "weekend.at": {
+                "username": "no.sweepers5.gewinnspiele@gmail.com",
+                "password": "ta-Kn-pagCtku5!"
+            }
+        }
+    )
+    assert "weekend.at" in profile.site_accounts
+    assert profile.site_accounts["weekend.at"]["username"] == "no.sweepers5.gewinnspiele@gmail.com"
+    assert profile.site_accounts["weekend.at"]["password"] == "ta-Kn-pagCtku5!"
 

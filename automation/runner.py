@@ -75,6 +75,51 @@ class AutomationRunner:
             sys.stdout.write("\a")
             sys.stdout.flush()
 
+    async def _handle_site_auth(self, item: SweepstakeItem, page: Page) -> None:
+        """Handles site-specific authentication if credentials are configured for the target domain."""
+        url_lower = item.url.lower()
+        if "weekend.at" in url_lower:
+            await self._login_weekend_at(page)
+
+    async def _login_weekend_at(self, page: Page) -> bool:
+        """Authenticates user on weekend.at before navigating to or submitting a sweepstake."""
+        creds = self.profile.site_accounts.get("weekend.at", {})
+        username = creds.get("username") or creds.get("user")
+        password = creds.get("password") or creds.get("pw")
+
+        if not username or not password:
+            return False
+
+        try:
+            # Check if current page already has an active session
+            page_text = (await page.content()).lower()
+            if any(term in page_text for term in ["abmelden", "logout", "mein profil"]):
+                logger.debug("Already authenticated on weekend.at.")
+                return True
+
+            logger.info("Authenticating user session on weekend.at...")
+            await page.goto("https://www.weekend.at/user/login", wait_until="domcontentloaded", timeout=settings.BROWSER_TIMEOUT_MS)
+            await page.wait_for_timeout(1500)
+            await self.dismiss_cookie_banners(page)
+
+            name_input = page.locator("#edit-name")
+            pass_input = page.locator("#edit-pass")
+            submit_btn = page.locator("#edit-submit")
+
+            if await name_input.is_visible() and await pass_input.is_visible():
+                await name_input.fill(username)
+                await pass_input.fill(password)
+                await submit_btn.click()
+                await page.wait_for_timeout(2500)
+                logger.info("Successfully authenticated on weekend.at.")
+                return True
+            else:
+                logger.debug("Weekend.at login form not visible or session active.")
+                return True
+        except Exception as e:
+            logger.warning(f"Error during weekend.at authentication: {e}")
+            return False
+
     async def run_single_automated(
         self,
         item: SweepstakeItem,
@@ -88,6 +133,9 @@ class AutomationRunner:
         logger.info(f"Opening sweepstake URL: {item.url} for '{item.title}'")
 
         try:
+            # Handle site-specific authentication prior to contest page if necessary
+            await self._handle_site_auth(item, page)
+
             # Navigate to destination
             response = await page.goto(
                 item.url,
@@ -134,8 +182,13 @@ class AutomationRunner:
             if has_post_captcha:
                 return SweepstakeStatus.PENDING, f"CAPTCHA triggered upon submission: {post_captcha_type}"
 
-            # Check for positive confirmation keywords
+            # Check for positive confirmation keywords across page and child frames
             page_text = (await page.content()).lower()
+            for f in page.frames:
+                try:
+                    page_text += " " + (await f.content()).lower()
+                except Exception:
+                    pass
             success_keywords = [
                 "vielen dank", "erfolgreich", "danke für deine teilnahme",
                 "danke für ihre teilnahme", "teilnahme registriert",
@@ -168,6 +221,7 @@ class AutomationRunner:
             page = await browser_mgr.create_stealth_page()
 
             try:
+                await self._handle_site_auth(item, page)
                 await page.goto(item.url, wait_until="domcontentloaded", timeout=settings.BROWSER_TIMEOUT_MS)
                 await page.wait_for_timeout(1500)
                 await self.dismiss_cookie_banners(page)
